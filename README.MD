@@ -1,5 +1,5 @@
-# Challenge: AWS Three-Tier Architecture, CloudFormation, Lambda, CodeBuild and CI/CD 
-## AWS Three-Tier Architecture 💥 [Infrastructure provisioning]
+# Challenge: CloudFormation, Serverless, CodeBuild and CI/CD 💥
+## Infrastructure provisioning
 
 A 3-Tier architecture provides a general framework for deploying traditional client/server applications into three logical tiers; the Web, Application, and Database tier. End users interact with the Web tier which provides them with a user interface they can use to view, modify, or submit information. The Application tier is responsible for handling the requests made by the user. The Application or Middle tier is the brains behind the operation. It assists in translating users actions into business logic that allow for data processing by programs. Lastly, the Database or Data tier is where the information processed by the application is stored and managed.
 
@@ -15,7 +15,7 @@ In case you wonder why we will use availability zones?
 4. Scalability
 5. Fault Tolerance
 
-#### Web Tier [Frontend]
+### Web Tier [Frontend]
 
 In this layer, we will create a public load balancer and an auto-scaling group. The load balancer will be used to distribute traffic across the instances.
 
@@ -29,7 +29,7 @@ In this layer, we will create a public load balancer and an auto-scaling group. 
 - EC2 Security Group allowing inbound permission from the the Web Tier Application Load Balancer
 - Create a public route table and associate the 2 public subnets.
 
-#### Application Tier [Backend]
+### Application Tier [Backend]
 
 In this layer, we will create an internal load balancer and an auto-scaling group. The load balancer will be used to distribute traffic across the application servers. The auto-scaling group will be used to scale the number of application servers up or down based on the demand.
 
@@ -43,7 +43,7 @@ In this layer, we will create an internal load balancer and an auto-scaling grou
 - Image host on docker hub 
 - Associate with private route table
 
-#### Database Tier [Data]
+### Database Tier [Data]
 
 In this layer, we will create a Multi AZ RDS MySQL database. The database will be used to store the data for the application.
 
@@ -54,7 +54,7 @@ In this layer, we will create a Multi AZ RDS MySQL database. The database will b
 - MySql RDS Database with Multi AZ standby instance
 - The Database Security Group allowing inbound traffic for MySQL from the Application Server Security Group
 
-#### Admin Tier [Ops]
+### Admin Tier [Ops]
 
 In this layer, we will create a bastion host. The bastion host will be used to access compute services in private networks for administration purposes.
 
@@ -64,8 +64,6 @@ In this layer, we will create a bastion host. The bastion host will be used to a
 - Public route table
 - MySql RDS Database with Multi AZ standby instance
 - The Database Security Group allowing inbound traffic for MySQL from the Application Server Security Group
-
-## Let's do it 🚀
 
 ### Prerequisites
 
@@ -83,6 +81,8 @@ In this layer, we will create a bastion host. The bastion host will be used to a
     ```sh
     aws configure
     ```
+
+### Steps
 
 1. Creat an EC2 Key Pair used to SSH into the bastion host
 
@@ -178,25 +178,26 @@ scp -i ./iac/aws-tree-tier-app-varela.pem -o StrictHostKeyChecking=no ./configur
 
 Before execute the following command we need to change database host and server host in the config.sh file.
 
-Now let’s SSH into our Bastion Host.
+Now let’s Run our configuration script.
 
 ```bash
-ssh -i ./iac/aws-tree-tier-app-varela.pem -o StrictHostKeyChecking=no ec2-user@<Bastion Host Public IP> 
-chmod 777 config.sh 
-chmod 400 aws-tree-tier-app-varela.pem 
-./config.sh
+ssh -i ./iac/aws-tree-tier-app-varela.pem -o StrictHostKeyChecking=no ec2-user@<Bastion Host Public IP> 'chmod 777 config.sh && chmod 400 aws-tree-tier-app-varela.pem && ./config.sh'
 ```
 
-Check the status of the web tier server.
+Check the status of the **web tier**.
+
+```bash
+curl external-alb-name
+```
 
 ![Frontend](./assets/frontend.png)
 
-Check the status of the application tier server.
+Check the status of the **application tier server**.
 
 ```bash
 ssh -i ./iac/aws-tree-tier-app-varela.pem -o StrictHostKeyChecking=no ec2-user@<Bastion Host Public IP>
 ssh -i aws-tree-tier-app-varela.pem -o StrictHostKeyChecking=no ec2-user@<Web Tier Private IP>
-curl internal-alb
+curl internal-alb-name
 ```
 
 ![Backend](./assets/backend.png)
@@ -306,12 +307,14 @@ A stack template file defines the resources that AWS CloudFormation provisions a
     aws s3 cp ./iac/main.yml s3://source-bucket-444/src/main.yml
     aws s3 cp ./build/buildspec.yml s3://source-bucket-444/src/buildspec.yml
     ```
+
 2. Create IAM role for CodeBuild
 
     ```bash
     aws iam create-role --role-name CodeBuildRole --assume-role-policy-document file://./build/trust-policy.json
     aws iam attach-role-policy --role-name CodeBuildRole --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
     ```
+
 3. Create CodeBuild project
 
     ```bash
@@ -424,7 +427,13 @@ aws iam list-policies --query 'Policies[?PolicyName==`CloudWatchEmailNotificatio
 aws sns create-topic --name RDS-Storage-Usage
 ```
 
-4. Configure CloudWatch to send email notifications
+4. Subscribe emails to the topic
+
+```bash
+aws sns subscribe --topic-arn arn:aws:sns:us-east-1:163740413966:RDS-Storage-Usage --protocol email --notification-endpoint xxxx@gmail.com
+```
+
+5. Configure CloudWatch to send email notifications
 
 ```bash
 aws cloudwatch put-metric-alarm --alarm-name RDS-Storage-Usage --alarm-description "RDS Storage Usage" --metric-name CPUUtilization --namespace AWS/RDS --statistic Average --period 300 --threshold 80 --comparison-operator GreaterThanThreshold --dimensions Name=DBInstanceIdentifier,Value=demo-database --evaluation-periods 1 --alarm-actions arn:aws:sns:us-east-1:163740413966:RDS-Storage-Usage --unit Bytes
@@ -432,15 +441,10 @@ aws cloudwatch put-metric-alarm --alarm-name RDS-Storage-Usage --alarm-descripti
 
 ![alarms](./assets/alarm.png)
 
-5. Delete resources
+6. Delete resources
 
 ```bash
 aws cloudwatch delete-alarms --alarm-names RDS-Storage-Usage
 aws sns delete-topic --topic-arn arn:aws:sns:us-east-1:163740413966:RDS-Storage-Usage
 aws iam delete-policy --policy-arn arn:aws:iam::163740413966:policy/CloudWatchEmailNotification
 ``` 
-
-
-
-
-
