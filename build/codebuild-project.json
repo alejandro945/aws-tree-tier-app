@@ -1,0 +1,17 @@
+{
+    "name": "codebuild-demo-varela",
+    "source": {
+        "type": "S3",
+        "location": "source-bucket-444/src/main.yml"
+    },
+    "artifacts": {
+        "type": "S3",
+        "location": "source-bucket-444"
+    },
+    "environment": {
+        "type": "LINUX_CONTAINER",
+        "image": "aws/codebuild/standard:4.0",
+        "computeType": "BUILD_GENERAL1_SMALL"
+    },
+    "serviceRole": "arn:aws:iam::163740413966:role/CodeBuildRole"
+}

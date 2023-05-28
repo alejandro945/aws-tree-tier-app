@@ -298,10 +298,78 @@ Is a serverless computing service provided by AWS, it runs your code in response
 
 Use CodeBuild to build the CloudFormation deployment artifact from the CloudFormation template.
 
+A stack template file defines the resources that AWS CloudFormation provisions and configures. These files are the same template files that you use when you create or update stacks using AWS CloudFormation.
+
+1. Upload the CloudFormation template to the S3 bucket and the buildspec.yml
+
+    ```bash
+    aws s3 cp ./iac/main.yml s3://source-bucket-444/src/main.yml
+    aws s3 cp ./build/buildspec.yml s3://source-bucket-444/src/buildspec.yml
+    ```
+2. Create IAM role for CodeBuild
+
+    ```bash
+    aws iam create-role --role-name CodeBuildRole --assume-role-policy-document file://./build/trust-policy.json
+    aws iam attach-role-policy --role-name CodeBuildRole --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+    ```
+3. Create CodeBuild project
+
+    ```bash
+    aws codebuild create-project --cli-input-json file://./build/codebuild-project.json
+    ```
+
+4. Run the build
+    
+    ```bash
+    aws codebuild start-build --project-name codebuild-demo-varela
+    aws codebuild batch-get-builds --ids codebuild-demo-varela:4dba753c-d699-4b15-9e5b-b033a82fe83c
+    ```
+
+5. Check the result
+
+    ![CodeBuild](./assets/codebuild.png)
+    
+    ```bash
+    {
+            "id": "codebuild-demo-varela:4dba753c-d699-4b15-9e5b-b033a82fe83c",
+            "arn": "arn:aws:codebuild:us-east-1:163740413966:build/codebuild-demo-varela:4dba753c-d699-4b15-9e5b-b033a82fe83c",
+            "buildNumber": 1,
+            "startTime": "2023-05-28T05:53:16.050000+00:00",
+            "currentPhase": "PROVISIONING",
+            "buildStatus": "IN_PROGRESS",
+            "projectName": "codebuild-demo-varela",
+            "phases": [
+                {
+                    "phaseType": "SUBMITTED",
+                    "phaseStatus": "SUCCEEDED",
+                    "startTime": "2023-05-28T05:53:16.050000+00:00",
+                    "endTime": "2023-05-28T05:53:16.137000+00:00",
+                    "durationInSeconds": 0
+                },
+                {
+                    "phaseType": "QUEUED",
+                    "phaseStatus": "SUCCEEDED",
+                    "startTime": "2023-05-28T05:53:16.137000+00:00",
+                    "endTime": "2023-05-28T05:53:19.501000+00:00",
+                    "durationInSeconds": 3
+                }
+    }
+    ```
+
+6. Clean up
+
+    ```bash
+    aws codebuild delete-project --name codebuild-demo-varela
+    aws iam detach-role-policy --role-name CodeBuildRole --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+    aws iam delete-role --role-name CodeBuildRole
+    aws s3 rm s3://source-bucket-444/src --recursive
+    aws s3api delete-bucket --bucket source-bucket-444
+    ```
+
 # CI/CD AWS
 
 **Requirements:**
-Create a gtihub workflow with two jobs, one to set up the environment and simulate running automated unit tests, and another that only runs if tests pass to deploy to an EC2 instance, over SSH using a file deployment. sh
+Create a gtihub workflow with two jobs, one to set up the environment and simulate running automated unit tests, and another that only runs if tests pass to deploy to an EC2 instance, over SSH using a file deploy.sh
 
 Copy deploy.sh to the bastion host
 
@@ -317,6 +385,8 @@ Secrets on github
 Proof of pipeline
 
 ![pipeline](./assets/pipeline.png)
+
+![proof](./assets/proof.png)
 
 # Monitoring AWS
 
