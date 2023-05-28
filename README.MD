@@ -328,7 +328,7 @@ A stack template file defines the resources that AWS CloudFormation provisions a
 5. Check the result
 
     ![CodeBuild](./assets/codebuild.png)
-    
+
     ```bash
     {
             "id": "codebuild-demo-varela:4dba753c-d699-4b15-9e5b-b033a82fe83c",
@@ -418,12 +418,6 @@ aws iam list-policies --query 'Policies[?PolicyName==`CloudWatchEmailNotificatio
 # arn:aws:iam::163740413966:policy/CloudWatchEmailNotification
 ```
 
-3. Create a SES verified email address
-
-```bash
-aws ses verify-email-identity --email-address alejo8677@gmail.com
-```
-
 3. Create a SNS topic
 
 ```bash
@@ -438,12 +432,11 @@ aws cloudwatch put-metric-alarm --alarm-name RDS-Storage-Usage --alarm-descripti
 
 ![alarms](./assets/alarm.png)
 
-Delete resources
+5. Delete resources
 
 ```bash
 aws cloudwatch delete-alarms --alarm-names RDS-Storage-Usage
 aws sns delete-topic --topic-arn arn:aws:sns:us-east-1:163740413966:RDS-Storage-Usage
-aws ses delete-identity --identity
 aws iam delete-policy --policy-arn arn:aws:iam::163740413966:policy/CloudWatchEmailNotification
 ``` 
 
