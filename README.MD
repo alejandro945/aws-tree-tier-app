@@ -199,11 +199,11 @@ ssh -i aws-tree-tier-app-varela.pem -o StrictHostKeyChecking=no ec2-user@<Web Ti
 curl internal-alb
 ```
 
-![Container](./assets/backend-container.png)
-
 ![Backend](./assets/backend.png)
 
 From app tier server we can check the status of the database server.
+
+![Container](./assets/backend-container.png)
 
 ```bash
  mysql --host=demo-database.cbmn4afmh1uc.us-east-1.rds.amazonaws.com --user=admin --password=admin123
@@ -307,8 +307,16 @@ Copy deploy.sh to the bastion host
 
 ```bash
 scp -i ./iac/aws-tree-tier-app-varela.pem -o StrictHostKeyChecking=no ./deploy.sh ec2-user@<Bastion Host Public IP>:/home/ec2-user
+chmod 777 deploy.sh
 ```
 
+Secrets on github
+
+![git](./assets/git-secrets.png)
+
+Proof of pipeline
+
+![pipeline](./assets/pipeline.png)
 
 # Monitoring AWS
 
@@ -319,12 +327,25 @@ Add a CloudWatch alert that sends an email notification when the RDS database ex
 
 ```bash
 aws iam create-policy --policy-name CloudWatchEmailNotification --policy-document file://./monitoring/cloudwatch-email-notification-policy.json
+{
+    "Policy":
+        "PolicyName": "CloudWatchEmailNotification",
+        "PolicyId": "ANPASMH5QOAHDUC57XQ4O",
+        "Arn": "arn:aws:iam::163740413966:policy/CloudWatchEmailNotification",
+        "Path": "/",
+        "DefaultVersionId": "v1",
+        "AttachmentCount": 0,
+        "PermissionsBoundaryUsageCount": 0,
+        "IsAttachable": true,
+        "CreateDate": "2023-05-28T04:41:20+00:00",
+}
 ```
 
 2. Get ARN of the policy
 
 ```bash
 aws iam list-policies --query 'Policies[?PolicyName==`CloudWatchEmailNotification`].Arn' --output text
+# arn:aws:iam::163740413966:policy/CloudWatchEmailNotification
 ```
 
 3. Create a SES verified email address
@@ -333,11 +354,28 @@ aws iam list-policies --query 'Policies[?PolicyName==`CloudWatchEmailNotificatio
 aws ses verify-email-identity --email-address alejo8677@gmail.com
 ```
 
+3. Create a SNS topic
+
+```bash
+aws sns create-topic --name RDS-Storage-Usage
+```
+
 4. Configure CloudWatch to send email notifications
 
 ```bash
-aws cloudwatch put-metric-alarm --alarm-name RDS-Storage-Usage --alarm-description "RDS Storage Usage" --metric-name FreeStorageSpace --namespace AWS/RDS --statistic Average --period 300 --threshold 80 --comparison-operator GreaterThanThreshold --dimensions Name=DBInstanceIdentifier,Value=aws-tree-tier-app-varela-db --evaluation-periods 1 --alarm-actions arn:aws:iam::163740413966:policy/CloudWatchEmailNotification --unit Bytes
+aws cloudwatch put-metric-alarm --alarm-name RDS-Storage-Usage --alarm-description "RDS Storage Usage" --metric-name CPUUtilization --namespace AWS/RDS --statistic Average --period 300 --threshold 80 --comparison-operator GreaterThanThreshold --dimensions Name=DBInstanceIdentifier,Value=demo-database --evaluation-periods 1 --alarm-actions arn:aws:sns:us-east-1:163740413966:RDS-Storage-Usage --unit Bytes
 ```
+
+![alarms](./assets/alarm.png)
+
+Delete resources
+
+```bash
+aws cloudwatch delete-alarms --alarm-names RDS-Storage-Usage
+aws sns delete-topic --topic-arn arn:aws:sns:us-east-1:163740413966:RDS-Storage-Usage
+aws ses delete-identity --identity
+aws iam delete-policy --policy-arn arn:aws:iam::163740413966:policy/CloudWatchEmailNotification
+``` 
 
 
 

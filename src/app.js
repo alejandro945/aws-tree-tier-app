@@ -26,6 +26,13 @@ app.get('/', (_, res) => {
   res.send('Hello World!');
 });
 
+/**
+ * Test endpoint for test purposes.
+ */
+app.get('/test', (_, res) => {
+  res.send('Hello Test!');
+});
+
 app.listen(port, () => console.log(`Listening on port ${port}!`));
 
 exports.connection = connection;
