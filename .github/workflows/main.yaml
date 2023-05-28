@@ -10,15 +10,15 @@ jobs:
     runs-on: ubuntu-latest
 
   deployment:
-    needs: setup
+    #needs: setup
     runs-on: ubuntu-latest
 
     steps:
-      - name: Integration via ssh
-        uses: garygrossgarten/github-action-ssh@release
-        with:
-          command: ./deploy.sh
-          host: ${{ secrets.HOST }}
-          username: ec2-user
-          passphrase: ''
-          privateKey: ${{ secrets.PRIVATE_KEY}}
+    - name: Integration via ssh
+      uses: garygrossgarten/github-action-ssh@release
+      with:
+        command: ./deploy.sh
+        host: ${{ secrets.HOST }}
+        username: ec2-user
+        passphrase: ''
+        privateKey: ${{ secrets.PRIVATE_KEY}}
