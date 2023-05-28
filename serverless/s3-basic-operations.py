@@ -3,6 +3,7 @@ import boto3
 def create_bucket(bucket_name):
     s3 = boto3.client('s3')
     s3.create_bucket(Bucket=bucket_name)
+    s3.get_waiter('bucket_exists').wait(Bucket=bucket_name)
 
 def copy_file(source_bucket, source_key, target_bucket, target_key):
     s3 = boto3.resource('s3')
