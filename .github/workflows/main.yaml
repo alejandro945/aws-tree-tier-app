@@ -45,12 +45,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Configure SSH
-        uses: webfactory/ssh-agent@v0.5.1
-        with:
-          ssh-private-key: ${{ secrets.PRIVATE_KEY }}
-
-      - name: SSH into EC2 instance and deploy
-        run: |
-          echo "ssh -o StrictHostKeyChecking=no -i ${{ secrets.PRIVATE_KEY }} ec2-user@${{secrets.HOST}} './deployment.sh'"
-          ssh -o StrictHostKeyChecking=no -i ${{ secrets.PRIVATE_KEY }} ec2-user@${{secrets.HOST}} './deployment.sh'
+      - name: Integration via ssh
+      uses: garygrossgarten/github-action-ssh@release
+      with:
+        command: ./deploy.sh
+        host: ${{ secrets.HOST }}
+        username: ec2-user
+        passphrase: ''
+        privateKey: ${{ secrets.PRIVATE_KEY}}
