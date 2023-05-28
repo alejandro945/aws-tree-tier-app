@@ -52,4 +52,5 @@ jobs:
 
       - name: SSH into EC2 instance and deploy
         run: |
+          echo "ssh -o StrictHostKeyChecking=no -i ${{ secrets.PRIVATE_KEY }} ec2-user@${{secrets.HOST}} './deployment.sh'"
           ssh -o StrictHostKeyChecking=no -i ${{ secrets.PRIVATE_KEY }} ec2-user@${{secrets.HOST}} './deployment.sh'
