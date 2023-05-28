@@ -33,7 +33,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
         with:
-          context: .
+          context: ./src
           push: true
           tags: |
             alejandro945/basic-node-server:${{ github.sha }}
