@@ -40,6 +40,7 @@ In this layer, we will create an internal load balancer and an auto-scaling grou
 - Internal Application Load Balancer with a Security Group allowing inbound permission from EC2 instances in the Web Tier.
 - Minimum of 2 EC2 instances in an Auto Scaling Group
 - EC2 Security Group allowing inbound permission from the Application Tier Application Load Balancer
+- Image host on docker hub 
 - Associate with private route table
 
 #### Database Tier [Data]
@@ -162,18 +163,82 @@ aws cloudformation delete-stack --stack-name aws-tree-tier-app-varela
 
 Is a serverless computing service provided by AWS, it runs your code in response to events and automatically manages the underlying compute resources for you. You can use AWS Lambda to extend other AWS services with custom logic, or create your own back-end services that operate at AWS scale, performance, and security.
 
-**Requirement:**
-Use the AWS CLI or AWS SDK to create an AWS Lambda function that performs a simple task, such as copying a file from one Amazon S3 bucket to another bucket.
+**Requirements:**
+
+- Create an IAM role for the AWS Lambda function and assign the necessary permissions to perform the task.
+
+    IAM Role creation:
+
+    ```bash
+    aws iam create-role --role-name LambdaRole --assume-role-policy-document file://../serverless/trust-policy.json
+    ```
+    Attach Policy to Role:
+
+    ```bash
+    aws iam attach-role-policy --role-name LambdaRole --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
+    ```
+
+    Create source-bucket and upload a local image file
+
+    ```bash
+    aws s3api create-bucket --bucket source-bucket --region us-east-1
+    aws s3 cp ./assets/design.png s3://source-bucket/src/design.png
+    ```
+    ```
+
+- Use the AWS CLI to create an AWS Lambda function that performs a simple task, such as copying a file from one Amazon S3 bucket to another bucket.
+
+    ```bash
+    aws lambda create-function --function-name S3Lambda --runtime python3.8 --role arn:aws:iam::163740413966:role/LambdaRole --handler lambda-function.lambda_handler --code fileb://../serverless/s3-basic-operations.py
+    ```
+
+    Invoke the AWS Lambda function to verify that it works correctly.
+
+    ```bash
+    aws lambda invoke --function-name S3Lambda --payload file://event.json output.txt
+    ```
+
+# CodeBuild AWS
+
+**Requirements:**
+
+Use CodeBuild to build the CloudFormation deployment artifact from the CloudFormation template.
+
+# CI/CD AWS
+
+**Requirements:**
+Create a gtihub workflow with two jobs, one to set up the environment and simulate running automated unit tests, and another that only runs if tests pass to deploy to an EC2 instance, over SSH using a file deployment. sh
+
+# Monitoring AWS
+
+**Requirements:**
+Add a CloudWatch alert that sends an email notification when the RDS database exceeds 80% capacity
+
+1. Create a IAM policy for allow CloudWatch to send email notifications
 
 ```bash
-aws lambda create-function \
-  --function-name CopyS3File \
-  --runtime python3.8 \
-  --role <IAM-role-ARN> \
-  --handler lambda_function.lambda_handler \
-  --code S3Bucket=<bucket-name>,S3Key=<code-file-name> \
-  --environment Variables={SOURCE_BUCKET=<source-bucket-name>,DESTINATION_BUCKET=<destination-bucket-name>}
+aws iam create-policy --policy-name CloudWatchEmailNotification --policy-document file://../monitoring/cloudwatch-email-notification-policy.json
 ```
+
+2. Get ARN of the policy
+
+```bash
+aws iam list-policies --query 'Policies[?PolicyName==`CloudWatchEmailNotification`].Arn' --output text
+```
+
+3. Create a SES verified email address
+
+```bash
+aws ses verify-email-identity --email-address alejo8677@gmail.com
+```
+
+4. Configure CloudWatch to send email notifications
+
+```bash
+aws cloudwatch put-metric-alarm --alarm-name RDS-Storage-Usage --alarm-description "RDS Storage Usage" --metric-name FreeStorageSpace --namespace AWS/RDS --statistic Average --period 300 --threshold 80 --comparison-operator GreaterThanThreshold --dimensions Name=DBInstanceIdentifier,Value=aws-tree-tier-app-varela-db --evaluation-periods 1 --alarm-actions arn:aws:iam::163740413966:policy/CloudWatchEmailNotification --unit Bytes
+```
+
+
 
 
 

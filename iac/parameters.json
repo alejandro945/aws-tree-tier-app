@@ -4,11 +4,11 @@
         "ParameterValue": "aws-tree-tier-app-varela.pem"
     },
     {
-        "ParameterKey": "DatabaseUser",
+        "ParameterKey": "MasterUsername",
         "ParameterValue": "admin"
     },
     {
-        "ParameterKey": "DatabasePassword",
+        "ParameterKey": "MasterUserPassword",
         "ParameterValue": "admin123"
     }
 ]
