@@ -46,10 +46,10 @@ jobs:
 
     steps:
       - name: Integration via ssh
-      uses: garygrossgarten/github-action-ssh@release
-      with:
-        command: ./deploy.sh
-        host: ${{ secrets.HOST }}
-        username: ec2-user
-        passphrase: ''
-        privateKey: ${{ secrets.PRIVATE_KEY}}
+        uses: garygrossgarten/github-action-ssh@release
+        with:
+          command: ./deploy.sh
+          host: ${{ secrets.HOST }}
+          username: ec2-user
+          passphrase: ''
+          privateKey: ${{ secrets.PRIVATE_KEY}}
