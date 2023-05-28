@@ -1,7 +1,7 @@
 [
     {
         "ParameterKey": "KeyPair",
-        "ParameterValue": "aws-tree-tier-app-varela.pem"
+        "ParameterValue": "aws-tree-tier-app-varela"
     },
     {
         "ParameterKey": "MasterUsername",

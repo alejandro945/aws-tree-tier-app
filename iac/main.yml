@@ -353,8 +353,8 @@ Resources:
       Description: "Allow HTTP from Web Tier Auto Scaling Group"
       GroupId: !Ref AppTierLBSecurityGroup
       IpProtocol: tcp
-      FromPort: 80
-      ToPort: 80
+      FromPort: 8080
+      ToPort: 8080
 
   AppTierSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -521,7 +521,7 @@ Resources:
     DependsOn: MySQLDBSubnetGroup
     Properties:
       Engine: mysql
-      EngineVersion: 8.0.30
+      EngineVersion: 8.0.32
       DBInstanceIdentifier: !Ref DatabaseName
       DBSecurityGroups: 
         - !Ref DatabaseSecurityGroup
@@ -531,12 +531,6 @@ Resources:
       DBInstanceClass: db.t2.small
       MultiAZ: true
       AllocatedStorage: 20
-    Outputs:
-      DatabaseEndpointAddress:
-        Description: The endpoint address of the MySQL database
-        Value: !GetAtt MySQLDatabase.Endpoint.Address
-        Export:
-          Name: !Sub aws-tree-tier-app-varela-DatabaseEndpointAddress
 
   AppTierLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
@@ -572,10 +566,8 @@ Resources:
               # Install docker-compose
               sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
               sudo chmod +x /usr/local/bin/docker-compose
-              # Obtener el valor de DatabaseEndpointAddress
-              DatabaseEndpointAddress: !ImportValue aws-tree-tier-app-varela-DatabaseEndpointAddress
               # Ejecutar una imagen de Docker
-              docker run -d -p 80:80 --name server --env DB_HOST=${DatabaseEndpointAddress} alejandro945/basic-node-server:latest
+              # docker run -d -p 80:80 --name server alejandro945/basic-node-server:latest
 
   AppTierApplicationLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -597,7 +589,7 @@ Resources:
       Name: !Sub ${EnvironmentName}-AppTier-TargetGroup
       HealthCheckIntervalSeconds: 30
       HealthCheckPath: /
-      Port: 80
+      Port: 8080
       Protocol: HTTP
       HealthyThresholdCount: 5
       UnhealthyThresholdCount: 2
@@ -647,6 +639,8 @@ Outputs:
   MySQLDatabaseEndpointAddress:
     Description: The FQDN of the MySQL Database
     Value: !GetAtt MySQLDatabase.Endpoint.Address
+    Export:
+      Name: !Sub aws-tree-tier-app-varela-DatabaseEndpointAddress
   MySQLDatabasePort:
     Description: The TCP port of the MySQL Database
     Value: !GetAtt MySQLDatabase.Endpoint.Port

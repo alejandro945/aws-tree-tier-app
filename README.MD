@@ -157,6 +157,60 @@ aws cloudformation describe-stacks --stack-name aws-tree-tier-app-varela --query
 aws cloudformation delete-stack --stack-name aws-tree-tier-app-varela
 ```
 
+Remarks in the process of the infrastructure as code creation we have the following error:
+
+- Resource handler returned message: "Cannot find version 8.0.30 for mysql
+
+This error is because the version of the mysql database is not available in the region where the stack is being created, to solve this problem we must see the engine versions available in the region where we are going to create the stack.
+
+```bash
+aws rds describe-db-engine-versions --engine mysql --query "*[].{Engine:Engine,EngineVersion:EngineVersion}" --output text
+```
+
+# Configuration Management
+
+Before we SSH into our Bastion Host let’s use SCP to copy our key pair file and config script to the Bastion Host. We can obtain the public IP address of the Bastion Host from the Outputs section of our stack deployment from earlier.
+
+```bash
+scp -i ./iac/aws-tree-tier-app-varela.pem -o StrictHostKeyChecking=no ./iac/aws-tree-tier-app-varela.pem ec2-user@<Bastion Host Public IP>:/home/ec2-user
+scp -i ./iac/aws-tree-tier-app-varela.pem -o StrictHostKeyChecking=no ./configuration/config.sh ec2-user@<Bastion Host Public IP>:/home/ec2-user
+```
+
+Before execute the following command we need to change database host and server host in the config.sh file.
+
+Now let’s SSH into our Bastion Host.
+
+```bash
+ssh -i ./iac/aws-tree-tier-app-varela.pem -o StrictHostKeyChecking=no ec2-user@<Bastion Host Public IP> 
+chmod 777 config.sh 
+chmod 400 aws-tree-tier-app-varela.pem 
+./config.sh
+```
+
+Check the status of the web tier server.
+
+![Frontend](./assets/frontend.png)
+
+Check the status of the application tier server.
+
+```bash
+ssh -i ./iac/aws-tree-tier-app-varela.pem -o StrictHostKeyChecking=no ec2-user@<Bastion Host Public IP>
+ssh -i aws-tree-tier-app-varela.pem -o StrictHostKeyChecking=no ec2-user@<Web Tier Private IP>
+curl internal-alb
+```
+
+![Container](./assets/backend-container.png)
+
+![Backend](./assets/backend.png)
+
+From app tier server we can check the status of the database server.
+
+```bash
+ mysql --host=demo-database.cbmn4afmh1uc.us-east-1.rds.amazonaws.com --user=admin --password=admin123
+ CREATE DATABASE test;
+ \q
+```
+
 # Lambda AWS
 
 ## What is Lambda?
@@ -170,8 +224,30 @@ Is a serverless computing service provided by AWS, it runs your code in response
     IAM Role creation:
 
     ```bash
-    aws iam create-role --role-name LambdaRole --assume-role-policy-document file://../serverless/trust-policy.json
+    aws iam create-role --role-name LambdaRole --assume-role-policy-document file://./serverless/trust-policy.json
+    {
+        "Role": {
+            "Path": "/",
+            "RoleName": "LambdaRole",
+            "RoleId": "AROASMH5QOAHG56GJEXL4",
+            "Arn": "arn:aws:iam::163740413966:role/LambdaRole",
+            "CreateDate": "2023-05-28T03:27:27+00:00",
+            "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "lambda.amazonaws.com"
+                        },
+                        "Action": "sts:AssumeRole"
+                    }
+                ]
+            }
+        }
+    }
     ```
+
     Attach Policy to Role:
 
     ```bash
@@ -181,21 +257,39 @@ Is a serverless computing service provided by AWS, it runs your code in response
     Create source-bucket and upload a local image file
 
     ```bash
-    aws s3api create-bucket --bucket source-bucket --region us-east-1
-    aws s3 cp ./assets/design.png s3://source-bucket/src/design.png
-    ```
+    aws s3api create-bucket --bucket source-bucket-444 --region us-east-1
+    aws s3 cp ./assets/design.png s3://source-bucket-444/src/design.png
     ```
 
 - Use the AWS CLI to create an AWS Lambda function that performs a simple task, such as copying a file from one Amazon S3 bucket to another bucket.
 
     ```bash
-    aws lambda create-function --function-name S3Lambda --runtime python3.8 --role arn:aws:iam::163740413966:role/LambdaRole --handler lambda-function.lambda_handler --code fileb://../serverless/s3-basic-operations.py
+    aws lambda create-function --function-name MyLambdaFunction \
+    --zip-file fileb://./serverless/basic.zip --handler s3-basic-operations.lambda_handler --runtime python3.8 \
+    --role arn:aws:iam::163740413966:role/LambdaRole
     ```
 
     Invoke the AWS Lambda function to verify that it works correctly.
 
     ```bash
-    aws lambda invoke --function-name S3Lambda --payload file://event.json output.txt
+    aws lambda invoke --function-name MyLambdaFunction out --log-type Tail \
+    --query 'LogResult' --output text |  base64 -d
+    ```
+
+    ![Buckets](./assets/buckets.png)
+
+    ![Lambda](./assets/lambda.png)
+
+    Clean up the AWS Lambda function and the IAM role.
+
+    ```bash
+    aws lambda delete-function --function-name MyLambdaFunction
+    aws iam detach-role-policy --role-name LambdaRole --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
+    aws iam delete-role --role-name LambdaRole
+    aws s3 rm s3://source-bucket-444/src --recursive
+    aws s3api delete-bucket --bucket source-bucket-444
+    aws s3 rm s3://destination-bucket-444/dest --recursive
+    aws s3api delete-bucket --bucket destination-bucket-444
     ```
 
 # CodeBuild AWS
@@ -209,6 +303,13 @@ Use CodeBuild to build the CloudFormation deployment artifact from the CloudForm
 **Requirements:**
 Create a gtihub workflow with two jobs, one to set up the environment and simulate running automated unit tests, and another that only runs if tests pass to deploy to an EC2 instance, over SSH using a file deployment. sh
 
+Copy deploy.sh to the bastion host
+
+```bash
+scp -i ./iac/aws-tree-tier-app-varela.pem -o StrictHostKeyChecking=no ./deploy.sh ec2-user@<Bastion Host Public IP>:/home/ec2-user
+```
+
+
 # Monitoring AWS
 
 **Requirements:**
@@ -217,7 +318,7 @@ Add a CloudWatch alert that sends an email notification when the RDS database ex
 1. Create a IAM policy for allow CloudWatch to send email notifications
 
 ```bash
-aws iam create-policy --policy-name CloudWatchEmailNotification --policy-document file://../monitoring/cloudwatch-email-notification-policy.json
+aws iam create-policy --policy-name CloudWatchEmailNotification --policy-document file://./monitoring/cloudwatch-email-notification-policy.json
 ```
 
 2. Get ARN of the policy

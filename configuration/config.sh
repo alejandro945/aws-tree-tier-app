@@ -1,0 +1,3 @@
+# Content: Configuration file for the AWS tree tier app
+ssh -i aws-tree-tier-app-varela.pem ec2-user@10.100.11.111 "docker run -d -p 8080:80 --name server -e DB_HOST=demo-database.cbmn4afmh1uc.us-east-1.rds.amazonaws.com alejandro945/basic-node-server:latest"
+ssh -i aws-tree-tier-app-varela.pem ec2-user@10.100.12.194 "docker run -d -p 8080:80 --name server -e DB_HOST=demo-database.cbmn4afmh1uc.us-east-1.rds.amazonaws.com alejandro945/basic-node-server:latest"

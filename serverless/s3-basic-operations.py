@@ -9,9 +9,9 @@ def copy_file(source_bucket, source_key, target_bucket, target_key):
     s3.meta.client.copy_object(Bucket=target_bucket, Key=target_key, CopySource={'Bucket': source_bucket, 'Key': source_key})
 
 def lambda_handler(event, context):
-    source_bucket = 'source-bucket'
+    source_bucket = 'source-bucket-444'
     source_key = 'src/design.png'
-    target_bucket = 'destination-bucket'
+    target_bucket = 'destination-bucket-444'
     target_key = 'dest/dest.png'
 
     s3 = boto3.client('s3')
